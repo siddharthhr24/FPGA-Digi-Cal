@@ -411,8 +411,7 @@ The project is fully synthesizable and simulation-tested.
 - Intel Quartus Prime
 - Intel MAX10 FPGA
 - ModelSim
-- IEEE Std Logic 1164
-- IEEE Numeric Standard
+
 
 ---
 
@@ -449,6 +448,10 @@ Possible future extensions include:
 - LCD/OLED display support
 - Memory-mapped register interface
 - Full RISC-V ALU integration
+
+---
+
+Refrenced Research Paper link: https://www.researchgate.net/publication/290749251_FPGA_Based_Digital_Electronic_Education_Data_Entry_Organization_for_a_Calculator
 
 ---
 
