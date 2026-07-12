@@ -1,1 +1,461 @@
-#FPGA-DIGI_CALC
+FPGA-Based Digital Calculator with Arithmetic & Logic Modes
+
+> A hardware-based digital calculator designed in **VHDL** for Intel MAX10 FPGA boards. The project demonstrates ALU design, finite hardware control, seven-segment display interfacing, and simulation-driven verification using a self-checking VHDL testbench.
+
+---
+
+*Project Overview*
+
+This project implements a **16-bit FPGA calculator** capable of performing both **Arithmetic** and **Logical** operations using an ALU written entirely in VHDL.
+
+Unlike software calculators, every operation is executed directly by digital hardware logic synthesized onto an FPGA.
+
+The design was developed using:
+
+- **VHDL**
+- **Intel Quartus Prime**
+- **ModelSim (Functional Simulation)**
+
+The project emphasizes clean modular hardware design by separating the system into independent components:
+
+- Top-level FPGA interface
+- ALU
+- Seven-segment decoder
+- Self-checking testbench
+
+---
+
+# Features
+
+## Arithmetic Mode
+
+Supports four arithmetic operations on two 8-bit operands.
+
+| Operation | Description |
+|-----------|-------------|
+| Addition | A + B |
+| Subtraction | A − B |
+| Multiplication | A × B |
+| Division | A ÷ B |
+
+Division-by-zero is safely handled by returning zero instead of generating undefined hardware behaviour.
+
+---
+
+--Logic Mode--
+
+A long press of **KEY1** switches the calculator into Logic Mode.
+
+Available logical operations are:
+
+| Operation | Description |
+|-----------|-------------|
+| AND | A AND B |
+| OR | A OR B |
+| XOR | A XOR B |
+| NOT | NOT A |
+
+Logical operations return an 8-bit value which is displayed as a 16-bit hexadecimal result.
+
+---
+
+# Hardware Inputs
+
+## Switches
+
+| FPGA Switch | Purpose |
+|-------------|---------|
+| SW[7:0] | 8-bit input operand |
+| SW[9:8] | Operation selector |
+
+---
+
+## Push Buttons
+
+The push buttons perform two completely different tasks.
+
+### KEY0
+
+Stores the value currently present on **SW[7:0]** into Operand A.
+
+---
+
+### KEY1 (Dual Function)
+
+#### Short Press
+
+Stores the current switch value into Operand B.
+
+#### Long Press (~1 second)
+
+Toggles between
+
+- Arithmetic Mode
+- Logic Mode
+
+The long-press functionality is implemented entirely in hardware using a clock-cycle counter.
+
+---
+
+# Operation Selection
+
+The two MSBs (SW9 and SW8) determine which operation is performed.
+
+## Arithmetic Mode
+
+| SW9 SW8 | Operation |
+|----------|-----------|
+| 00 | Addition |
+| 01 | Subtraction |
+| 10 | Multiplication |
+| 11 | Division |
+
+---
+
+## Logic Mode
+
+| SW9 SW8 | Operation |
+|----------|-----------|
+| 00 | AND |
+| 01 | OR |
+| 10 | XOR |
+| 11 | NOT |
+
+---
+
+# Display Output
+
+The project uses six seven-segment displays.
+
+| Display | Function |
+|----------|----------|
+| HEX0 | Result bits [3:0] |
+| HEX1 | Result bits [7:4] |
+| HEX2 | Result bits [11:8] |
+| HEX3 | Result bits [15:12] |
+| HEX4 | Current operation code (0–3) |
+| HEX5 | Current calculator mode |
+
+HEX5 displays:
+
+- **A** → Arithmetic Mode
+- **L** → Logic Mode
+
+---
+
+# Example
+
+Suppose
+
+Operand A = 15 (0x0F)
+
+Operand B = 5 (0x05)
+
+Operation = Addition
+
+Result
+
+```
+000F + 0005 = 0014
+```
+
+Displays
+
+```
+HEX3 HEX2 HEX1 HEX0
+
+0    0    1    4
+```
+
+---
+
+# Project Structure
+
+```
+.
+├── Top_Calc.vhd
+├── ALU_Calc.vhd
+├── 7_SegDis.vhd
+├── tb_ALU_Calc.vhd
+├── LICENSE
+└── README.md
+```
+
+---
+
+# Module Description
+
+## 1. Top_Calc.vhd
+
+Top-level hardware wrapper.
+
+Responsibilities:
+
+- Connects FPGA clock
+- Connects switches
+- Connects push buttons
+- Instantiates the ALU module
+- Routes outputs to all six seven-segment displays
+
+No computational logic is implemented here.
+
+---
+
+## 2. ALU_Calc.vhd
+
+This is the core of the project.
+
+It performs:
+
+- Operand storage
+- Mode selection
+- Long-press detection
+- Arithmetic operations
+- Logical operations
+- Display formatting
+
+### Internal Signals
+
+| Signal | Purpose |
+|---------|----------|
+| operandA | Stores first operand |
+| operandB | Stores second operand |
+| operation | Selected operation |
+| result | 16-bit calculation result |
+| mode | Arithmetic / Logic mode |
+| long_press_counter | Detects KEY1 long press |
+| mode_changed | Prevents repeated toggling during one button hold |
+
+---
+
+### Long Press Detection
+
+The FPGA runs at **50 MHz**.
+
+A generic parameter
+
+```
+LONG_PRESS_LIMIT
+```
+
+is used to count clock cycles.
+
+Default value:
+
+```
+50,000,000
+```
+
+which corresponds to
+
+```
+1 second
+```
+
+When KEY1 remains pressed until this count is reached, the calculator toggles between Arithmetic and Logic modes.
+
+---
+
+### Arithmetic Operations
+
+Internally performed using **unsigned** arithmetic from IEEE Numeric Standard.
+
+Addition
+
+```
+A + B
+```
+
+Subtraction
+
+```
+A - B
+```
+
+Multiplication
+
+```
+A * B
+```
+
+Division
+
+```
+A / B
+```
+
+---
+
+### Logical Operations
+
+Implemented using VHDL bitwise operators.
+
+```
+A AND B
+```
+
+```
+A OR B
+```
+
+```
+A XOR B
+```
+
+```
+NOT A
+```
+
+---
+
+## 3. 7_SegDis.vhd
+
+Implements the hexadecimal to seven-segment decoder.
+
+The decoder converts every 4-bit nibble into the corresponding seven-segment pattern.
+
+Supported symbols:
+
+```
+0 1 2 3 4 5 6 7 8 9
+A B C D E F
+```
+
+Every result nibble is independently decoded before being displayed.
+
+---
+
+## 4. tb_ALU_Calc.vhd
+
+A complete self-checking functional simulation.
+
+Unlike traditional testbenches that only generate waveforms, this testbench automatically verifies every calculation.
+
+It performs the following:
+
+- Generates a 50 MHz clock
+- Applies operands
+- Simulates button presses
+- Simulates long presses
+- Reads seven-segment outputs
+- Converts display values back into hexadecimal
+- Reconstructs the complete 16-bit result
+- Compares against expected values
+- Reports PASS / FAIL
+- Counts passed and failed test cases
+
+For faster simulation the generic
+
+```
+LONG_PRESS_LIMIT
+```
+
+is overridden from
+
+```
+50,000,000
+```
+
+to
+
+```
+20
+```
+
+clock cycles.
+
+This reduces simulation time dramatically while preserving identical hardware behaviour.
+
+---
+
+# FPGA Pin Mapping
+
+The design assumes an Intel MAX10 FPGA board.
+
+| FPGA Resource | Connected To |
+|---------------|--------------|
+| MAX10_CLK1_50 | System clock |
+| SW[7:0] | Operand input |
+| SW[9:8] | Operation select |
+| KEY0 | Latch Operand A |
+| KEY1 (Short) | Latch Operand B |
+| KEY1 (Long) | Toggle Mode |
+| HEX0 | Result[3:0] |
+| HEX1 | Result[7:4] |
+| HEX2 | Result[11:8] |
+| HEX3 | Result[15:12] |
+| HEX4 | Operation indicator |
+| HEX5 | Mode indicator |
+
+---
+
+# Simulation
+
+Functional simulation was performed using ModelSim.
+
+Verification includes:
+
+- Arithmetic operations
+- Logical operations
+- Long-press detection
+- Display decoding
+- Automatic result verification
+
+The project is fully synthesizable and simulation-tested.
+
+---
+
+# Technologies Used
+
+- VHDL
+- Intel Quartus Prime
+- Intel MAX10 FPGA
+- ModelSim
+- IEEE Std Logic 1164
+- IEEE Numeric Standard
+
+---
+
+# Learning Outcomes
+
+This project demonstrates practical understanding of:
+
+- FPGA Design Flow
+- Hardware Description Languages
+- ALU Architecture
+- Digital Logic Design
+- Seven-Segment Display Interfacing
+- Modular Hardware Design
+- Clocked Sequential Logic
+- Combinational Logic
+- Generic Parameters
+- Hardware Verification
+- Self-Checking Testbenches
+
+---
+
+# Future Improvements
+
+Possible future extensions include:
+
+- Signed arithmetic
+- Overflow detection
+- Barrel shifter operations
+- Rotate left/right operations
+- Bit counting
+- Comparator instructions
+- Status flags (Carry, Zero, Negative, Overflow)
+- UART interface
+- LCD/OLED display support
+- Memory-mapped register interface
+- Full RISC-V ALU integration
+
+---
+
+**Author**
+
+Siddharth Hirpathak
+
+Integrated M.Tech — Electronics & Communication Engineering
+
+Passionate about Digital Design, FPGA Development, Embedded Systems, Computer Architecture, and Hardware Acceleration.
